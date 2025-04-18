@@ -1,12 +1,9 @@
-import base64
 import io
 import json
-import re
 from io import StringIO
 
 import cv2
 import requests
-from PIL import Image
 from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import StreamingResponse
 from meta_ai_api import MetaAI
@@ -24,39 +21,6 @@ async def get_preprocessed_image(file: UploadFile = File(...)):
 
     _, buffer = cv2.imencode(".png", preprocessed_image)
     return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/png")
-
-
-def image_to_base64_jpeg(image_np):
-    pil_img = Image.fromarray(image_np).convert("RGB")
-    buffer = io.BytesIO()
-    pil_img.save(buffer, format="JPEG")
-    encoded_image = base64.b64encode(buffer.getvalue()).decode()
-    return encoded_image
-
-
-def extract_text_from_llava(image_np):
-    base64_image = image_to_base64_jpeg(image_np)
-    print(base64_image)
-    payload = {
-        "model": "llava:7b",
-        "prompt": "Extract only the math expression in plain text from this image. Do NOT explain anything. No punctuation. Just return the math.",
-        "images": [base64_image]
-    }
-    try:
-        response = requests.post("http://localhost:11434/api/generate", json=payload)
-        if response.ok:
-            full = response.text.strip()
-
-            # Heuristic cleanup: remove known noisy prefixes
-            full = full.replace("The math equation is:", "").strip()
-            full = re.sub(r'^.*?\n\n', '', full)  # remove any intro sentences before double newline
-            return full
-        else:
-            print("❌ LLaVA API error:", response.text)
-            return ""
-    except Exception as e:
-        print("❌ Failed to connect to LLaVA API:", str(e))
-        return ""
 
 
 def prepare_image_for_processing(image_bytes: bytes):

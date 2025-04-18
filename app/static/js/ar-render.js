@@ -12,7 +12,7 @@ window.updateARText = function (fullText) {
       value: cleaned,
       color: 'yellow',
       align: 'center',
-      wrapCount:30,    // better line length
+      wrapCount:30,    
       width: 3.5,         // smaller AR box
       baseline: 'center',
       lineHeight: 50,

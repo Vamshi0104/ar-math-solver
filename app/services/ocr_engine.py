@@ -53,44 +53,12 @@ def extract_text(image_np):
         latex = latex_model(pil_img).strip()
 
         if is_gibberish(latex):
-            print("⚠️ Pix2Tex produced gibberish. Using Tesseract fallback...")
+            print("Pix2Tex produced gibberish. Using Tesseract fallback...")
             return pytesseract.image_to_string(pil_img, config='--psm 6').strip()
         return latex
     except Exception as e:
-        print(f"❌ OCR extraction failed: {e}")
+        print(f"OCR extraction failed: {e}")
         return ""
-
-
-def split_equation_and_question(text):
-    # Normalize spaces and remove newlines
-    text = re.sub(r'\s+', ' ', text.replace('\n', ' ')).strip()
-
-    # Expanded list of natural language question triggers
-    question_keywords = [
-        'what', 'solve', 'find', 'calculate', 'determine', 'evaluate',
-        'roots', 'value', 'when', 'if', 'how', 'show', 'give', 'derive',
-        'compute', 'simplify', 'prove', 'integrate', 'differentiate', 'result'
-    ]
-
-    # Lowercase version for keyword search only
-    lowered = text.lower()
-
-    # Try to locate where the question likely starts
-    question_start_idx = -1
-    for kw in question_keywords:
-        match = re.search(rf'\b{kw}\b', lowered)
-        if match:
-            question_start_idx = match.start()
-            break
-
-    if question_start_idx != -1:
-        equation_raw = text[:question_start_idx].strip(" ,")
-        question_raw = text[question_start_idx:].strip()
-    else:
-        equation_raw = text.strip()
-        question_raw = ""
-
-    return equation_raw, question_raw.lower()
 
 
 def clean_equation(raw_text: str):
