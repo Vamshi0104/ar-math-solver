@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>AR Math Visualizer</title>
+
+    <!-- A-Frame and AR.js -->
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.0.0/aframe/build/aframe-ar.min.js"></script>
+
+    <!-- Style -->
+    <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+
+<body style="margin: 0; overflow: hidden">
+<a-scene embedded arjs="sourceType: webcam; detectionMode: mono; debugUIEnabled: false;">
+    <a-marker type="pattern"
+              url="/static/markers/diff-triggerr.patt"
+              emitevents="true"
+              marker-listener>
+        <a-box position="0 0.5 0" color="red"></a-box>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+</a-scene>
+
+
+<!-- Upload Form -->
+<form id="uploadForm" style="position: absolute; top: 10px; left: 10px; z-index: 10">
+    <input type="file" id="imageInput" name="file" accept="image/*" required/>
+    <button type="submit">Upload</button>
+</form>
+
+<!-- Scripts -->
+<script src="/static/js/ar-render.js"></script>
+<script src="/static/js/api-client.js"></script>
+</body>
+</html>

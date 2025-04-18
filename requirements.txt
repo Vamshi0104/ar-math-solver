@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pytesseract
+opencv-python
+numpy
+Pillow
+requests
+pix2tex[gui]
+python-multipart
+torch
+meta-ai-api

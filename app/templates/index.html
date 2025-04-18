@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>AR Math Equation Solver</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+          background-color: #eaf4fb;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        h1 {
+          font-weight: 600;
+          color: #005792;
+        }
+        #output {
+          white-space: pre-wrap;
+        }
+        #spinner {
+          display: none;
+        }
+        #previewImage, #refinedImage {
+          max-width: 100%;
+          border-radius: 8px;
+          display: none;
+          margin-top: 1rem;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-3">
+<div class="container">
+    <div class="text-center mb-4">
+        <h1>🧮 AR Math Equation Solver</h1>
+    </div>
+
+    <!-- Upload Form -->
+    <form id="uploadForm" class="card p-3 mb-4">
+        <label class="form-label">Upload an equation image</label>
+        <input type="file" id="equationImage" class="form-control mb-2" accept="image/*" required/>
+        <button type="submit" class="btn btn-primary w-100">🔍 Upload & Solve</button>
+    </form>
+
+    <!-- Image Previews -->
+    <!-- Image Previews -->
+    <div class="row justify-content-center text-center">
+        <div class="col-md-6">
+            <h5 class="section-title">Preview Image</h5>
+            <img id="previewImage" src="" alt="Preview" class="img-fluid d-block mx-auto"/>
+        </div>
+    </div>
+
+    <div id="spinner" class="text-center mt-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Solving equation, please wait...</p>
+    </div>
+
+    <div id="refinedImageBlock" class="row justify-content-center text-center mt-4" style="display: none;">
+        <div class="col-md-6">
+            <h5 class="section-title">Refined Image (Preprocessed)</h5>
+            <img id="refinedImage" src="" alt="Refined Preview" class="img-fluid d-block mx-auto"/>
+        </div>
+    </div>
+
+
+    <!-- Output Section -->
+    <div id="output" class="card mt-4 p-4">
+        <h4 class="section-title">Extracted Query:</h4>
+        <div id="extractedQuery" class="fw-bold text-success mb-3"></div>
+
+        <h4 class="section-title">Solution Steps:</h4>
+        <p id="solutionSteps"></p>
+    </div>
+</div>
+
+<script>
+    const uploadForm = document.getElementById('uploadForm');
+    const spinner = document.getElementById('spinner');
+    let currentQuery = '';
+    let currentSteps = [];
+
+    document.getElementById('equationImage').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const preview = document.getElementById('previewImage');
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          preview.src = event.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    async function streamProcessImage(blob) {
+      spinner.style.display = 'block';
+      document.getElementById('extractedQuery').innerHTML = '';
+      document.getElementById('solutionSteps').innerHTML = '';
+
+      const formData = new FormData();
+      formData.append('file', blob);
+
+      // Refined Image
+      const refinedImgRes = await fetch('/api/equation/preprocessed-image', {
+        method: 'POST',
+        body: formData
+      });
+      const refinedBlob = await refinedImgRes.blob();
+      const refinedURL = URL.createObjectURL(refinedBlob);
+      const refinedImage = document.getElementById('refinedImage');
+      refinedImage.src = refinedURL;
+      refinedImage.style.display = 'block';
+      document.getElementById('refinedImageBlock').style.display = 'block';
+
+      // Query extraction
+      const queryRes = await fetch('/api/equation/query', {
+        method: 'POST',
+        body: formData
+      });
+      const queryData = await queryRes.json();
+      currentQuery = queryData.query || 'N/A';
+
+      document.getElementById('extractedQuery').innerHTML = `
+        <div><b style="color:#256029;">Raw LaTeX:</b> <code style="color:#ad3973;">${queryData.raw || 'N/A'}</code></div>
+        <div><b style="color:#256029;">Corrected:</b> \\(${queryData.corrected || 'N/A'}\\)</div>
+        <div><b style="color:#256029;">Final Query:</b> \\(${currentQuery}\\)</div>
+      `;
+
+      if (window.MathJax) {
+        MathJax.startup.promise.then(() => MathJax.typesetPromise());
+      }
+
+      // Streaming steps
+      const response = await fetch('/api/equation/stream', {
+        method: 'POST',
+        body: formData
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      const stepContainer = document.getElementById('solutionSteps');
+      stepContainer.innerHTML = '';
+      currentSteps = [];
+
+      const li = document.createElement('li');
+      stepContainer.appendChild(li);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        li.innerHTML += chunk;
+        currentSteps.push(chunk);
+        MathJax.typesetPromise();
+      }
+
+      spinner.style.display = 'none';
+    }
+
+    uploadForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('equationImage');
+      if (fileInput.files.length > 0) {
+        streamProcessImage(fileInput.files[0]);
+      }
+    });
+</script>
+</body>
+</html>
