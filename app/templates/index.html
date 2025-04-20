@@ -125,8 +125,7 @@
 
       document.getElementById('extractedQuery').innerHTML = `
         <div><b style="color:#256029;">Raw LaTeX:</b> <code style="color:#ad3973;">${queryData.raw || 'N/A'}</code></div>
-        <div><b style="color:#256029;">Corrected:</b> \\(${queryData.corrected || 'N/A'}\\)</div>
-        <div><b style="color:#256029;">Final Query:</b> \\(${currentQuery}\\)</div>
+        <div><b style="color:#256029;">Final Math Expression :</b> \\(${queryData.corrected || 'N/A'}\\)</div>
       `;
 
       if (window.MathJax) {

@@ -11,13 +11,13 @@ def start_ollama_model():
             print("Ollama is not installed. Please install it from https://ollama.com/")
             return
         check_model = subprocess.run(["ollama", "list"], capture_output=True, text=True)
-        if "wizard-math:7b" not in check_model.stdout:
-            print("Model not found. Pulling wizard-math:7b...")
-            subprocess.run(["ollama", "pull", "wizard-math:7b"], check=True)
+        if "wizard-math:13b" not in check_model.stdout:
+            print("Model not found. Pulling wizard-math:13b...")
+            subprocess.run(["ollama", "pull", "wizard-math:13b"], check=True)
         else:
-            print("Model wizard-math:7b is already available.")
-        print("Starting Ollama model: wizard-math:7b ...")
-        subprocess.Popen(["ollama", "run", "wizard-math:7b"])
+            print("Model wizard-math:13b is already available.")
+        print("Starting Ollama model: wizard-math:13b ...")
+        subprocess.Popen(["ollama", "run", "wizard-math:13b"])
         time.sleep(5)
 
     except Exception as e:

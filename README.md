@@ -8,7 +8,7 @@ An intelligent, camera-enabled or marker-based Augmented Reality (AR) applicatio
 
 - Upload-based or camera-based equation solving
 - Pix2Tex OCR for high-accuracy LaTeX extraction
-- Local LLM powered by `wizard-math:7b` via [Ollama](https://ollama.com/) for step-by-step math solutions
+- Local LLM powered by `wizard-math:13b` via [Ollama](https://ollama.com/) for step-by-step math solutions
 - Supports both raw LaTeX and corrected equations
 - AR visualization using [AR.js](https://ar-js-org.github.io/AR.js-Docs/) to project equations in the real world
 - Live solution streaming via FastAPI using `StreamingResponse`
@@ -71,17 +71,17 @@ pip install -r requirements.txt
 
 ### 4. Start your local LLM (Ollama)
 
-Make sure the `wizard-math:7b` model is available.
+Make sure the `wizard-math:13b` model is available.
 
 ```bash
-ollama run wizard-math:7b
+ollama run wizard-math:13b
 ```
 
 If it's not installed yet:
 
 ```bash
-ollama pull wizard-math:7b
-ollama run wizard-math:7b
+ollama pull wizard-math:13b
+ollama run wizard-math:13b
 ```
 
 ### 5. Launch the application
@@ -121,7 +121,7 @@ Print it or display it clearly on screen for detection.
 - FastAPI + Uvicorn
 - Pix2Tex, Tesseract, SymPy, OpenCV
 - AR.js, A-Frame, Bootstrap 5
-- MathJax, Ollama, wizard-math:7b
+- MathJax, Ollama, wizard-math:13b
 
 ---
 

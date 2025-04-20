@@ -1,142 +1,126 @@
 import io
 import json
-from io import StringIO
 
 import cv2
+import numpy as np
 import requests
+from PIL import Image, ImageOps
 from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import StreamingResponse
 from meta_ai_api import MetaAI
 
 from app.services.image_preprocessing import preprocess_image
-from app.services.ocr_engine import extract_text, clean_equation, extract_ai_text
+from app.services.ocr_engine import extract_text, extract_ai_text, is_gibberish, correct_latex_ocr
 
 router = APIRouter(prefix="/api/equation", tags=["Equation"])
+
+
+def process_image(image_bytes: bytes):
+    raw_img = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes)).convert("RGB"))
+    raw_np = np.array(raw_img)
+
+    print("Trying OCR on original image...")
+    raw_text = extract_text(image_bytes, raw_np, source="raw")
+
+    if is_gibberish(raw_text):
+        print("OCR not good. Preprocessing...")
+        preprocessed = preprocess_image(image_bytes)
+        raw_text = extract_text(image_bytes, preprocessed, source="preprocessed")
+    else:
+        preprocessed = cv2.cvtColor(raw_np, cv2.COLOR_RGB2GRAY)
+
+    print("Final OCR:", raw_text)
+    eqn, qn = extract_ai_text(raw_text)
+    return preprocessed, raw_text, eqn, qn
+
+
+def build_prompt(eqn: str, qn: str, stream=False):
+    if stream:
+        return f"""
+You are a highly intelligent math tutor AI.
+
+A student has submitted a math problem extracted from an image. Your job is to:
+1. Detect and understand the math expression.
+2. Solve it step-by-step.
+3. Conclude with the final answer.
+
+If unsolvable, reply: "No clear math problem was detected."
+
+---
+
+**Extracted Math Expression**:
+{eqn}
+{f'**Related Question:** {qn}' if qn else ''}
+"""
+    else:
+        return f"""
+You are a math solving assistant.
+
+Evaluate the following LaTeX-style math expression and return ONLY the final numeric or simplified symbolic result.
+
+DO NOT provide steps.
+DO NOT explain.
+
+---
+
+Problem:
+{eqn}
+"""
 
 
 @router.post("/preprocessed-image")
 async def get_preprocessed_image(file: UploadFile = File(...)):
     image_bytes = await file.read()
-    preprocessed_image, _, _ = prepare_image_for_processing(image_bytes)
-
-    _, buffer = cv2.imencode(".png", preprocessed_image)
+    pre, _, _, _ = process_image(image_bytes)
+    _, buffer = cv2.imencode(".png", pre)
     return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/png")
-
-
-def prepare_image_for_processing(image_bytes: bytes):
-    preprocessed_image = preprocess_image(image_bytes)
-    raw_text = extract_text(preprocessed_image)
-    # raw_text = extract_text_from_llava(preprocessed_image)
-    print("raw_text : ", raw_text)
-    corrected_raw_text = extract_ai_text(raw_text)
-    print("corrected_raw_text : ", corrected_raw_text)
-    equation, question = clean_equation(corrected_raw_text)
-    print("equation : ", equation)
-    print("question : ", question)
-    return preprocessed_image, equation, question
 
 
 @router.post("/stream")
 async def stream_equation_solution(file: UploadFile = File(...)):
     image_bytes = await file.read()
-    preprocessed_image, equation, question = prepare_image_for_processing(image_bytes)
-
-    prompt = f"""
-    You are an expert math tutor helping a student understand and solve problems step by step.
-
-    Below is some text that was extracted from an image. It may contain a math problem, a question, or both.
-
-    Your task is to:
-    1. Identify any math expression, equation, or problem within the text.
-    2. Solve it step by step, clearly explaining each stage of the process.
-    3. Conclude with the final answer in a clear and friendly way.
-
-    If the text doesn't contain any math at all, respond politely by saying no math problem was found.
-
-    ---
-
-    Extracted Text:
-    {equation}
-
-    {f"Additional Question: {question}" if question else ""}
-    """
-
-    buffer = StringIO()  # Optional: still collect if needed for later parsing
+    _, raw_text, eqn, qn = process_image(image_bytes)
+    corrected_eqn = correct_latex_ocr(raw_text).splitlines()[0].strip()
+    prompt = build_prompt(corrected_eqn, qn, stream=True)
 
     def stream_llm():
         with requests.post("http://localhost:11434/api/generate", json={
-            "model": "wizard-math:7b",
-            "prompt": prompt,
-            "stream": True
+            "model": "wizard-math:13b", "prompt": prompt, "stream": True
         }, stream=True) as r:
             for line in r.iter_lines():
                 if line:
                     try:
-                        chunk = json.loads(line.decode("utf-8"))
-                        token = chunk.get("response", "")
-                        buffer.write(token)
-                        yield token
+                        yield json.loads(line.decode("utf-8")).get("response", "")
                     except:
                         continue
 
-    return StreamingResponse(
-        stream_llm(),
-        media_type="text/plain"
-    )
+    return StreamingResponse(stream_llm(), media_type="text/plain")
 
 
 @router.post("/query")
-async def extract_equation_query(file: UploadFile = File(...)):
+async def extract_equation(file: UploadFile = File(...)):
     image_bytes = await file.read()
-    preprocessed_image = preprocess_image(image_bytes)
-    raw_text = extract_text(preprocessed_image)
-    corrected_raw_text = extract_ai_text(raw_text)
-    equation, question = clean_equation(corrected_raw_text)
-
+    _, raw_text, eqn, qn = process_image(image_bytes)
+    corrected_eqn = correct_latex_ocr(raw_text).splitlines()[0].strip()
     return {
-        "query": f"{question}: {equation}" if question else equation,
+        "query": f"{qn}: {eqn}" if qn else eqn,
         "raw": raw_text,
-        "corrected": corrected_raw_text
+        "corrected": corrected_eqn
     }
 
 
 @router.post("/ar-query")
-async def extract_equation_query(file: UploadFile = File(...)):
+async def extract_equation_answer_only(file: UploadFile = File(...)):
     image_bytes = await file.read()
-
-    # Step 1: Preprocess and extract raw OCR text
-    preprocessed_image = preprocess_image(image_bytes)
-    raw_text = extract_text(preprocessed_image)
-
-    # Step 2: Correct OCR noise using AI
-    corrected_raw_text = extract_ai_text(raw_text)
-    equation, question = clean_equation(corrected_raw_text)
-
-    # Step 3: Prompt for final answer only
-    full_prompt = f"""
-    You are a math solving assistant.
-
-    Evaluate the following LaTeX-style math expression and return ONLY the final numeric or simplified symbolic result.
-
-    DO NOT provide steps.
-    DO NOT explain.
-    DO NOT rephrase or introduce the answer.
-
-    Just return the final answer as short as possible.
-
-    ---
-
-    Problem:
-    {raw_text}
-    """
+    _, raw_text, eqn, qn = process_image(image_bytes)
+    corrected_eqn = correct_latex_ocr(raw_text).splitlines()[0].strip()
     ai = MetaAI()
-    print(full_prompt)
-    response = ai.prompt(message=full_prompt)
-    cleansed_response = response["message"]
-
+    prompt = build_prompt(corrected_eqn, qn)
+    print(prompt)
+    result = ai.prompt(message=prompt)["message"]
     return {
-        "query": f"{question}: {equation}" if question else equation,
+        "query": f"{qn}: {eqn}" if qn else eqn,
         "raw": raw_text,
-        "corrected": corrected_raw_text,
-        "answer": cleansed_response
+        "corrected": f"{eqn}, {qn}" if qn else eqn,
+        "answer": result
     }

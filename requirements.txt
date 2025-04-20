@@ -9,3 +9,4 @@ pix2tex[gui]
 python-multipart
 torch
 meta-ai-api
+scikit-image
