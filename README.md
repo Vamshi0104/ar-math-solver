@@ -144,7 +144,7 @@ Print it or display it clearly on screen for detection.
 
 ## DEMO:
 
-[![Watch the Demo](https://is1-ssl.mzstatic.com/image/thumb/Purple112/v4/b1/fc/3d/b1fc3d96-a69d-acba-2ec2-e3460f185368/AppIcon-1x_U007emarketing-0-0-0-7-0-0-85-220.png/1200x630wa.png)](https://drive.google.com/uc?id=1-GuAkBnskkBW-FC4DKYmFsbOpTIUVpdl)
+[![Watch the Demo](https://is1-ssl.mzstatic.com/image/thumb/Purple112/v4/b1/fc/3d/b1fc3d96-a69d-acba-2ec2-e3460f185368/AppIcon-1x_U007emarketing-0-0-0-7-0-0-85-220.png/1200x630wa.png)]([https://drive.google.com/uc?id=1-GuAkBnskkBW-FC4DKYmFsbOpTIUVpdl](https://drive.google.com/file/d/1-GuAkBnskkBW-FC4DKYmFsbOpTIUVpdl/view))
 
 ---
 
