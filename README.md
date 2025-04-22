@@ -140,6 +140,13 @@ Print it or display it clearly on screen for detection.
 
 ---
 
+## Sample AR Math Solving Equation:
+
+[![Demo Video](https://is1-ssl.mzstatic.com/image/thumb/Purple112/v4/b1/fc/3d/b1fc3d96-a69d-acba-2ec2-e3460f185368/AppIcon-1x_U007emarketing-0-0-0-7-0-0-85-220.png/1200x630wa.png)](sample_output/ar-math-solver_sample-video-summation.mp4)
+
+
+---
+
 ## License
 
 Copyright © 2025 Vamshi Krishna Madhavan
